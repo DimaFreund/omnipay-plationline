@@ -55,9 +55,21 @@ trait HasSoapRequestTrait
         if (empty($response)) {
             throw new \Exception('ERROR: Nu am putut comunica cu serverul PO pentru operatiunea de autorizare!');
         }
-        Xml::validate($response, $this->getSoapResponseValidationUrl());
-        $responseObject = simplexml_load_string($response, 'SimpleXMLElement', LIBXML_NOCDATA);
-        return $responseObject;
+        
+        // Check if response is XML format (starts with '<')
+        if (substr(trim($response), 0, 1) !== '<') {
+            // If not XML, throw an exception with the actual server response
+            throw new \Exception('Server response is not in XML format: ' . $response);
+        }
+        
+        try {
+            Xml::validate($response, $this->getSoapResponseValidationUrl());
+            $responseObject = simplexml_load_string($response, 'SimpleXMLElement', LIBXML_NOCDATA);
+            return $responseObject;
+        } catch (\Exception $e) {
+            // If XML validation or parsing fails, throw an exception with details
+            throw new \Exception('Failed to process XML response: ' . $e->getMessage() . '. Original response: ' . $response);
+        }
     }
 
     /**
